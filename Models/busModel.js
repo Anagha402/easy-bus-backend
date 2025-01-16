@@ -22,7 +22,7 @@ const busSchema= new mongoose.Schema({
         required:true
     },
     journeyDate:{
-        type:Date,
+        type:String,
         required:true
     },
     departure:{
@@ -37,10 +37,7 @@ const busSchema= new mongoose.Schema({
         type:String,
         required:true
     },
-    name:{
-        type:String,
-        required:true
-    },
+    
     fare:{
         type:Number,
         required:true
