@@ -12,8 +12,14 @@ app.use(cors());
 
 const usersRoute=require('./Routes/usersRoute')
 const busesRoute=require('./Routes/busesRoute')
+const bookingsRoute=require("./Routes/bookingsRoute")
+
+
 app.use('/api/users',usersRoute)
 app.use("/api/buses", busesRoute)
+app.use("/api/bookings", bookingsRoute)
+
+
 app.listen(port,()=>{
     console.log(`Nodejs server listening on port ${port} `);
     
