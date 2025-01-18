@@ -4,10 +4,13 @@ const Booking=require("../Models/bookingsModel")
 const Bus=require('../Models/busModel')
 
 
+
+
+
 //book a seat
 router.post("/book-seat",authMiddleware, async(req,res)=>{
     try{
-        const newBooking= new Booking({...req.body, transactionId:"1234", user:req.body.userId})
+        const newBooking= new Booking({...req.body, transactionId:"123", user:req.body.userId})
         await newBooking.save()
         const bus=await Bus.findById(req.body.bus)
         bus.seatsBooked=[...bus.seatsBooked, ...req.body.seats]
