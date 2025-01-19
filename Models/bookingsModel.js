@@ -20,7 +20,11 @@ const bookingSchema= new mongoose.Schema({
         type:String,
         
         required:true
-    }
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
 
 
 
@@ -30,4 +34,6 @@ const bookingSchema= new mongoose.Schema({
 }
 
 )
+
+
 module.exports=mongoose.model("bookings", bookingSchema)

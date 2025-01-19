@@ -8,7 +8,6 @@ const Bus=require('../Models/busModel')
 
 
 //book a seat
-// book a seat
 router.post("/book-seat",authMiddleware, async(req,res)=>{
     try{
         const newBooking= new Booking({...req.body ,user:req.body.userId})
@@ -33,6 +32,7 @@ router.post("/book-seat",authMiddleware, async(req,res)=>{
 
     }
 })
+
 
 
 
