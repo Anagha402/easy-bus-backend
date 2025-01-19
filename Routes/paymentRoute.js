@@ -3,8 +3,9 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Booking = require('../Models/bookingsModel'); // Replace with your Booking model
 const authMiddleware = require('../Middlewares/authMiddleware');
-const { log } = require('console');
+
 const router = express.Router();
+const Bus=require('../Models/busModel')
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID, // Add in .env file
@@ -61,6 +62,18 @@ router.post('/verify-payment',authMiddleware, async (req, res) => {
             });
 
             await newBooking.save();
+
+            // Update the bus document
+        const busData = await Bus.findById(bus);
+        if (!busData) {
+            console.error("Bus not found");
+            return res.status(404).send({ success: false, message: "Bus not found!" });
+        }
+
+        busData.seatsBooked = [...new Set([...busData.seatsBooked, ...seats])]; // Avoid duplicate seats
+        await busData.save();
+        console.log("Bus seats updated successfully");
+           
             res.status(200).send({ success: true, message: "Payment verified, booking confirmed!" });
             
             
