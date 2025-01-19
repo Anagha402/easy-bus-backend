@@ -1,26 +1,24 @@
 const router=require("express").Router()
 const authMiddleware = require("../Middlewares/authMiddleware")
 const Booking=require("../Models/bookingsModel")
-const Bus=require('../Models/busModel')
 
 
 
-
-
-//book a seat
-router.post("/book-seat",authMiddleware, async(req,res)=>{
+//get bookings by user id
+router.post("/get-bookings-by-user-id", authMiddleware, async(req,res)=>{
     try{
-        const newBooking= new Booking({...req.body ,user:req.body.userId})
-        await newBooking.save()
-        const bus=await Bus.findById(req.body.bus)
-        bus.seatsBooked=[...bus.seatsBooked, ...req.body.seats]
-        await bus.save()
+        const bookings = await Booking.find({ user: req.body.userId })
+  .populate("bus")
+  .populate("user");
+
+
+  console.log('Populated Bookings:', bookings);
+
         res.status(200).send({
-            message:"Booking successfull",
-            data:newBooking,
+            message:"Bookings fetched successfully",
+            data:bookings,
             success:true
         })
-
 
     }catch(error){
         res.status(500).send({
@@ -29,9 +27,20 @@ router.post("/book-seat",authMiddleware, async(req,res)=>{
             success:false
         })
 
-
     }
+
+
+
+
+
 })
+
+
+
+
+
+
+
 
 
 
