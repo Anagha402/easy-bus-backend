@@ -54,6 +54,17 @@ router.post('/login', async(req,res)=>{
                 data:null
             })
         }
+        if(userExists.isBlocked){
+            res.send({
+                message:"Your account is blocked.Please contact the admin",
+                success:false,
+                data:null
+            })
+
+        }
+
+
+
         const passwordMatch= await bcrypt.compare(req.body.password, userExists.password)
 
         if(!passwordMatch){
@@ -98,5 +109,46 @@ router.post('/get-user-by-id', authMiddleware, async (req, res) => {
         });
     }
 });
+
+//get-all-users
+router.post('/get-all-users', authMiddleware, async(req,res)=>{
+    try{
+        const users= await User.find({})
+        res.send({
+            message:"Users fetched successfully",
+            success:true,
+            data:users
+        })
+
+    }catch(error){
+        res.send({
+            message:error.message,
+            success:false,
+            data:null
+        })
+
+    }
+})
+
+//update-user
+router.post("/update-user-permissions", authMiddleware, async(req,res)=>{
+    try{
+        await User.findByIdAndUpdate(req.body._id, req.body)
+        res.send({
+            message:"User permissions updated successfully",
+            success:true,
+            data:null
+        })
+
+
+    }catch(error){
+        res.send({
+            message:error.message,
+            success:false,
+            data:null
+        })
+
+    }
+})
 
 module.exports=router

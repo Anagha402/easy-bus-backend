@@ -14,12 +14,14 @@ const usersRoute=require('./Routes/usersRoute')
 const busesRoute=require('./Routes/busesRoute')
 const bookingsRoute=require("./Routes/bookingsRoute")
 const paymentRoute=require("./Routes/paymentRoute")
+const adminRoute = require('./Routes/adminRoute');
 
 
 app.use('/api/users',usersRoute)
 app.use("/api/buses", busesRoute)
 app.use("/api/bookings", bookingsRoute)
 app.use("/api/payment", paymentRoute)
+app.use('/api/admin', adminRoute);
 
 
 app.post("/api/test-post", (req, res) => {

@@ -34,8 +34,16 @@ router.post('/add-bus',authMiddleware, async(req,res)=>{
 //get-all-buses
 router.post("/get-all-buses", authMiddleware,  async(req,res)=>{
     try{
+        const { from, to, journeyDate } = req.body;
 
-        const buses= await Bus.find();
+    // Build the filter object dynamically
+    const filter = {};
+    if (from) filter.from = new RegExp(from, "i"); // Case-insensitive match
+    if (to) filter.to = new RegExp(to, "i");
+    if (journeyDate) filter.journeyDate = journeyDate;
+  
+  
+        const buses= await Bus.find(filter);
         return res.status(200).send({
             success:true,
             message:"Buses fetched successfully",
