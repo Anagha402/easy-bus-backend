@@ -1,65 +1,38 @@
-router.post('/get-bookings-by-date', authMiddleware, async (req, res) => {
-  const { date } = req.body;
-
-  console.log('Received Date:', date);
-
-  if (!date) {
-    return res.status(400).json({ success: false, message: 'Date is required' });
-  }
-
-  const formattedDate = moment(date, 'YYYY-MM-DD', true);
-  console.log('Formatted Date:', formattedDate.toString(), 'Is Valid:', formattedDate.isValid());
-
-  if (!formattedDate.isValid()) {
-    return res.status(400).json({ success: false, message: 'Invalid date format' });
-  }
-
+// Get all bookings
+router.post("/get-all-bookings", authMiddleware, async (req, res) => {
   try {
-    const nextDay = formattedDate.clone().add(1, 'days');
-    console.log('Query Date Range:', formattedDate.toDate(), nextDay.toDate());
+    // Fetch all bookings with populated user and bus data
+    const bookings = await Booking.find()
+      .populate("user") // Populate user data
+      .populate("bus"); // Populate bus data
 
-    const bookings = await Booking.aggregate([
-      {
-        $match: {
-          createdAt: {
-            $gte: formattedDate.toDate(),
-            $lt: nextDay.toDate(),
-          },
-        },
-      },
-      {
-        $group: {
-          _id: '$bus',
-          totalRevenue: { $sum: '$fare' },
-          bookingsCount: { $sum: 1 },
-        },
-      },
-      {
-        $lookup: {
-          from: 'buses',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'busData',
-        },
-      },
-      {
-        $unwind: '$busData',
-      },
-    ]);
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).send({
+        message: "No bookings found",
+        success: false,
+        data: [],
+      });
+    }
 
-    console.log('Bookings Data:', bookings);
-
-    const busData = bookings.map((booking) => ({
-      busName: booking.busData.name,
-      revenue: booking.totalRevenue,
-      bookings: booking.bookingsCount,
+    // Add totalAmount to each booking
+    const bookingsWithAmount = bookings.map((booking) => ({
+      ...booking.toObject(),
+      totalAmount: booking.seats.length * booking.bus.fare, // Calculate total amount
     }));
 
-    const totalRevenue = bookings.reduce((sum, booking) => sum + booking.totalRevenue, 0);
-
-    res.status(200).json({ success: true, data: { totalRevenue, busData } });
+    res.status(200).send({
+      message: "Bookings fetched successfully",
+      success: true,
+      data: bookingsWithAmount,
+    });
   } catch (error) {
-    console.error('Error fetching bookings:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Error fetching bookings:", error);
+    res.status(500).send({
+      message: "An error occurred while fetching bookings.",
+      success: false,
+      data: error.message,
+    });
   }
 });
+
+
