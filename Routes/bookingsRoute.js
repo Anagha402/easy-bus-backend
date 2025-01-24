@@ -85,37 +85,37 @@ router.post("/get-all-bookings", authMiddleware, async (req, res) => {
 
 
 
-// Endpoint to fetch total revenue by bus for a specific date
 router.post('/get-revenue-by-date', authMiddleware, async (req, res) => {
   const { date } = req.body;
 
   try {
-    // Fetch bookings for the selected date
+    const startDate = new Date(date);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 1);
+
+    // Fetch bookings within the selected date
     const bookings = await Booking.find({
       createdAt: {
-        $gte: new Date(date),
-        $lt: new Date(date).setDate(new Date(date).getDate() + 1),
+        $gte: startDate,
+        $lt: endDate,
       },
-    })
-      .populate('bus'); // Populate bus details to get the fare
+    }).populate('bus'); // Populate bus details to get the fare
 
-    // Group by bus name and calculate revenue
+    // Group revenue by bus
     const revenueData = bookings.reduce((acc, booking) => {
       const busName = booking.bus.name;
-      const fare = booking.bus.fare; // Get the fare from the bus document
-      const seatsBooked = booking.seats.length; // Count the booked seats
-      const revenue = fare * seatsBooked; // Calculate the revenue
+      const fare = booking.bus.fare;
+      const seatsBooked = booking.seats.length;
+      const revenue = fare * seatsBooked;
 
       if (!acc[busName]) {
         acc[busName] = 0;
       }
 
-      acc[busName] += revenue; // Add the revenue for this bus
-
+      acc[busName] += revenue;
       return acc;
     }, {});
 
-    // Send the grouped revenue data
     res.status(200).send({
       success: true,
       data: revenueData,
@@ -124,13 +124,10 @@ router.post('/get-revenue-by-date', authMiddleware, async (req, res) => {
     console.error('Error fetching revenue data:', error);
     res.status(500).send({
       success: false,
-      message: 'An error occurred while fetching revenue data for the selected date.',
+      message: 'An error occurred while fetching revenue data.',
     });
   }
 });
-
-
-
 
 
   module.exports = router;
