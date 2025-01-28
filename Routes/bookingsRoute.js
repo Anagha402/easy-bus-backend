@@ -84,7 +84,8 @@ router.post("/get-all-bookings", authMiddleware, async (req, res) => {
 });
 
 
-
+//get revenue by date
+//get revenue by date
 router.post('/get-revenue-by-date', authMiddleware, async (req, res) => {
   const { date } = req.body;
 
@@ -128,6 +129,99 @@ router.post('/get-revenue-by-date', authMiddleware, async (req, res) => {
     });
   }
 });
+
+
+
+// For Monthly Revenue
+router.post('/get-revenue-by-month', authMiddleware, async (req, res) => {
+  const { month, year } = req.body;
+
+  try {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const bookings = await Booking.find({
+      createdAt: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).populate('bus');
+
+    const revenueData = bookings.reduce((acc, booking) => {
+      const busName = booking.bus.name;
+      const fare = booking.bus.fare;
+      const seatsBooked = booking.seats.length;
+      const revenue = fare * seatsBooked;
+
+      if (!acc[busName]) {
+        acc[busName] = 0;
+      }
+
+      acc[busName] += revenue;
+      return acc;
+    }, {});
+
+    const totalRevenue = Object.values(revenueData).reduce((acc, revenue) => acc + revenue, 0);
+
+    res.status(200).send({
+      success: true,
+      totalRevenue,
+      data: revenueData,
+    });
+  } catch (error) {
+    console.error('Error fetching revenue data:', error);
+    res.status(500).send({
+      success: false,
+      message: 'An error occurred while fetching revenue data.',
+    });
+  }
+});
+
+// For Yearly Revenue
+router.post('/get-revenue-by-year', authMiddleware, async (req, res) => {
+  const { year } = req.body;
+
+  try {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
+
+    const bookings = await Booking.find({
+      createdAt: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).populate('bus');
+
+    const revenueData = bookings.reduce((acc, booking) => {
+      const busName = booking.bus.name;
+      const fare = booking.bus.fare;
+      const seatsBooked = booking.seats.length;
+      const revenue = fare * seatsBooked;
+
+      if (!acc[busName]) {
+        acc[busName] = 0;
+      }
+
+      acc[busName] += revenue;
+      return acc;
+    }, {});
+
+    const totalRevenue = Object.values(revenueData).reduce((acc, revenue) => acc + revenue, 0);
+
+    res.status(200).send({
+      success: true,
+      totalRevenue,
+      data: revenueData,
+    });
+  } catch (error) {
+    console.error('Error fetching revenue data:', error);
+    res.status(500).send({
+      success: false,
+      message: 'An error occurred while fetching revenue data.',
+    });
+  }
+});
+
 
 
   module.exports = router;

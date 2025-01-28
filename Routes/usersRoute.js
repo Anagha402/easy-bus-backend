@@ -3,6 +3,7 @@ const User=require('../Models/usersModel')
 const bcrypt=require('bcryptjs')
 const jwt=require('jsonwebtoken')
 const authMiddleware = require('../Middlewares/authMiddleware')
+const nodemailer=require('nodemailer')
 
 
 //register new user
