@@ -16,6 +16,10 @@ const bookingSchema= new mongoose.Schema({
         
         required:true
     },
+    totalAmount: {
+        type: Number, //  field to store the total amount
+        required: true,
+      },
     transactionId:{
         type:String,
         
@@ -25,6 +29,8 @@ const bookingSchema= new mongoose.Schema({
         type: Date,
          default: Date.now,
     },
+    
+    
 
 
 

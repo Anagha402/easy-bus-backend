@@ -7,38 +7,62 @@ const Bus = require('../Models/busModel');
 
 
 //get bookings by user id
-router.post("/get-bookings-by-user-id", authMiddleware, async(req,res)=>{
-    try{
-        const bookings = await Booking.find({ user: req.body.userId })
-  .populate("bus")
-  .populate("user");
+router.post("/get-bookings-by-user-id", authMiddleware, async (req, res) => {
+  try {
+      const bookings = await Booking.find({ user: req.body.userId })
+          .populate("bus")
+          .populate("user");
 
+      res.status(200).send({
+          message: "Bookings fetched successfully",
+          data: bookings,
+          success: true
+      });
+  } catch (error) {
+      res.status(500).send({
+          message: "Booking failed",
+          data: error,
+          success: false
+      });
+  }
+});
 
-  console.log('Populated Bookings:', bookings);
-
-        res.status(200).send({
-            message:"Bookings fetched successfully",
-            data:bookings,
-            success:true
-        })
-
-    }catch(error){
-        res.status(500).send({
-            message:"Booking failed",
-            data:error,
-            success:false
-        })
-
-    }
-
-
-
-
-
-})
 
 
 // Get all bookings
+
+// router.post("/get-all-bookings", authMiddleware, async (req, res) => {
+//   try {
+//     // Fetch all bookings with populated user and bus data
+//     const bookings = await Booking.find()
+//       .populate("user")
+//       .populate("bus");
+
+//     // Handle case when no bookings are found
+//     if (!bookings || bookings.length === 0) {
+//       return res.status(404).send({
+//         message: "No bookings found",
+//         success: false,
+//         data: [],
+//       });
+//     }
+
+//     // Send success response with totalAmount directly from the collection
+//     res.status(200).send({
+//       message: "Bookings fetched successfully",
+//       success: true,
+//       data: bookings, // Send the bookings data as is (totalAmount already exists)
+//     });
+//   } catch (error) {
+//     // Log and send error response
+//     console.error("Error fetching bookings:", error);
+//     res.status(500).send({
+//       message: "An error occurred while fetching bookings.",
+//       success: false,
+//       data: error.message,
+//     });
+//   }
+// });
 router.post("/get-all-bookings", authMiddleware, async (req, res) => {
   try {
     // Fetch all bookings with populated user and bus data
@@ -46,42 +70,40 @@ router.post("/get-all-bookings", authMiddleware, async (req, res) => {
       .populate("user")
       .populate("bus");
 
+    // Handle case when no bookings are found
     if (!bookings || bookings.length === 0) {
       return res.status(404).send({
         message: "No bookings found",
         success: false,
         data: [],
-        totalRevenue: 0, // Return 0 if no bookings
+        totalRevenue: 0, // Return 0 revenue when no bookings
       });
     }
 
-    // Calculate total revenue
-    const totalRevenue = bookings.reduce((sum, booking) => {
-      return sum + booking.seats.length * booking.bus.fare;
-    }, 0);
+    // Calculate total revenue from all bookings
+    const totalRevenue = bookings.reduce((acc, booking) => acc + booking.totalAmount, 0);
 
-    // Add totalAmount to each booking
-    const bookingsWithAmount = bookings.map((booking) => ({
-      ...booking.toObject(),
-      totalAmount: booking.seats.length * booking.bus.fare,
-    }));
-
+    // Send success response with total revenue
     res.status(200).send({
       message: "Bookings fetched successfully",
       success: true,
-      data: bookingsWithAmount,
-      totalRevenue, // Include total revenue in the response
+      data: bookings, // Send the bookings data as is
+      totalRevenue, // Add total revenue to the response
     });
   } catch (error) {
+    // Log and send error response
     console.error("Error fetching bookings:", error);
     res.status(500).send({
       message: "An error occurred while fetching bookings.",
       success: false,
       data: error.message,
-      totalRevenue: 0,
+      totalRevenue: 0, // Return 0 revenue in case of error
     });
   }
 });
+
+
+
 
 
 //get revenue by date
@@ -100,14 +122,12 @@ router.post('/get-revenue-by-date', authMiddleware, async (req, res) => {
         $gte: startDate,
         $lt: endDate,
       },
-    }).populate('bus'); // Populate bus details to get the fare
+    }).populate('bus');
 
-    // Group revenue by bus
+    // Group revenue by bus using totalAmount
     const revenueData = bookings.reduce((acc, booking) => {
       const busName = booking.bus.name;
-      const fare = booking.bus.fare;
-      const seatsBooked = booking.seats.length;
-      const revenue = fare * seatsBooked;
+      const revenue = booking.totalAmount;
 
       if (!acc[busName]) {
         acc[busName] = 0;
@@ -129,6 +149,7 @@ router.post('/get-revenue-by-date', authMiddleware, async (req, res) => {
     });
   }
 });
+
 
 
 
@@ -147,11 +168,10 @@ router.post('/get-revenue-by-month', authMiddleware, async (req, res) => {
       },
     }).populate('bus');
 
+    // Group revenue by bus using totalAmount
     const revenueData = bookings.reduce((acc, booking) => {
       const busName = booking.bus.name;
-      const fare = booking.bus.fare;
-      const seatsBooked = booking.seats.length;
-      const revenue = fare * seatsBooked;
+      const revenue = booking.totalAmount;
 
       if (!acc[busName]) {
         acc[busName] = 0;
@@ -176,6 +196,8 @@ router.post('/get-revenue-by-month', authMiddleware, async (req, res) => {
     });
   }
 });
+
+
 
 // For Yearly Revenue
 router.post('/get-revenue-by-year', authMiddleware, async (req, res) => {
@@ -192,11 +214,10 @@ router.post('/get-revenue-by-year', authMiddleware, async (req, res) => {
       },
     }).populate('bus');
 
+    // Group revenue by bus using totalAmount
     const revenueData = bookings.reduce((acc, booking) => {
       const busName = booking.bus.name;
-      const fare = booking.bus.fare;
-      const seatsBooked = booking.seats.length;
-      const revenue = fare * seatsBooked;
+      const revenue = booking.totalAmount;
 
       if (!acc[busName]) {
         acc[busName] = 0;
@@ -224,5 +245,6 @@ router.post('/get-revenue-by-year', authMiddleware, async (req, res) => {
 
 
 
-  module.exports = router;
 
+
+  module.exports = router;

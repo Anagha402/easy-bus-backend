@@ -114,7 +114,7 @@ router.post('/get-user-by-id', authMiddleware, async (req, res) => {
 //get-all-users
 router.post('/get-all-users', authMiddleware, async(req,res)=>{
     try{
-        const users= await User.find({})
+        const users= await User.find({}).skip(1)
         res.send({
             message:"Users fetched successfully",
             success:true,
@@ -130,6 +130,10 @@ router.post('/get-all-users', authMiddleware, async(req,res)=>{
 
     }
 })
+
+
+
+
 
 //update-user
 router.post("/update-user-permissions", authMiddleware, async(req,res)=>{
