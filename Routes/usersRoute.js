@@ -7,17 +7,20 @@ const nodemailer=require('nodemailer')
 
 // Configure nodemailer
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
-        user: process.env.EMAIL_USER,  
-        pass: process.env.EMAIL_PASS,  
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
     },
 });
 
-// Generate OTP function
+// Function to generate OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-router.post('/register', async (req, res) => {
+const otpStorage = new Map(); // Temporary storage for OTPs
+
+//  Register Route - Only Sends OTP
+router.post("/register", async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
@@ -26,12 +29,11 @@ router.post('/register', async (req, res) => {
             return res.send({ message: "User already exists", success: false });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
         const otp = generateOTP();
-        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins validity
+        const otpExpires = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
 
-        const newUser = new User({ name, email, password: hashedPassword, otp, otpExpires });
-        await newUser.save();
+        // Store OTP and user details temporarily
+        otpStorage.set(email, { name, email, password, otp, otpExpires });
 
         // Send OTP via email
         await transporter.sendMail({
@@ -48,26 +50,45 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Verify OTP
-router.post('/verify-otp', async (req, res) => {
+//  Verify OTP - Saves User if OTP Matches
+router.post("/verify-otp", async (req, res) => {
     try {
         const { email, otp } = req.body;
-        const user = await User.findOne({ email });
+        const storedOtpData = otpStorage.get(email);
 
-        if (!user || user.otp !== otp || new Date() > user.otpExpires) {
-            return res.send({ message: "Invalid or expired OTP", success: false });
+        if (!storedOtpData) {
+            return res.send({ message: "No OTP request found. Please register again.", success: false });
         }
 
-        user.otp = null;  
-        user.otpExpires = null;  
-        await user.save();
+        // Check if OTP is valid
+        if (storedOtpData.otp !== otp) {
+            return res.send({ message: "Invalid OTP. Please try again.", success: false });
+        }
 
-        return res.send({ message: "OTP verified successfully", success: true });
+        if (Date.now() > storedOtpData.otpExpires) {
+            otpStorage.delete(email);
+            return res.send({ message: "OTP expired. Please request a new OTP.", success: false });
+        }
+
+        // Hash password and save user to database
+        const hashedPassword = await bcrypt.hash(storedOtpData.password, 10);
+        const newUser = new User({ name: storedOtpData.name, email, password: hashedPassword });
+        await newUser.save();
+
+        // Remove OTP data from temporary storage
+        otpStorage.delete(email);
+
+        return res.send({ message: "OTP verified successfully. You can now log in.", success: true });
 
     } catch (error) {
         return res.status(500).send({ message: error.message, success: false });
     }
 });
+
+
+
+
+
 
 //register new user
 // router.post('/register',async(req,res)=>{

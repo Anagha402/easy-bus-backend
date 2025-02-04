@@ -244,6 +244,72 @@ router.post('/get-revenue-by-year', authMiddleware, async (req, res) => {
 });
 
 
+// API to fetch passenger details based on bus number and journey date
+router.post("/passenger-details", authMiddleware, async (req, res) => {
+  try {
+    const { busNumber, journeyDate } = req.body;
+
+    if (!busNumber || !journeyDate) {
+      return res.status(400).json({ message: "Bus number and journey date are required" });
+    }
+
+    // Find the bus by number
+    const bus = await Bus.findOne({ number: busNumber });
+
+    if (!bus) {
+      return res.status(404).json({ message: "Bus not found" });
+    }
+
+    // Validate the journey date
+    const date = new Date(journeyDate);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ message: "Invalid journey date format" });
+    }
+
+    // Fetch bookings with the matched bus ID and journey date
+    const bookings = await Booking.find({
+      bus: bus._id,
+      createdAt: {
+        $gte: date.setHours(0, 0, 0, 0), // Start of the day
+        $lt: date.setHours(23, 59, 59, 999), // End of the day
+      },
+    }).populate("bus");
+
+    if (!bookings.length) {
+      return res.status(404).json({ message: "No passengers found for this bus and date" });
+    }
+
+    // Extract relevant passenger details
+    const passengerDetails = bookings.map((booking) => ({
+      seats: booking.seats,
+      passengerDetails: booking.passengerDetails.map((passenger, index) => ({
+        name: passenger.name,
+        age: passenger.age,
+        gender: passenger.gender,
+        seat: booking.seats[index] || "N/A",
+      })),
+    }));
+
+    return res.status(200).json({ passengerDetails });
+  } catch (error) {
+    console.error("Error fetching passenger details:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+
+
+
+
+
+ 
+
+  
+
+
+
+
 
 
 

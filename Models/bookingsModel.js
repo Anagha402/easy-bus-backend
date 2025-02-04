@@ -20,6 +20,11 @@ const bookingSchema= new mongoose.Schema({
         type: Number, //  field to store the total amount
         required: true,
       },
+      passengerDetails: [{
+        name: { type: String, required: true },
+        age: { type: Number, required: true },
+        gender: { type: String, required: true }
+    }],
     transactionId:{
         type:String,
         

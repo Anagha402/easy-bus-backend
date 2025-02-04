@@ -112,4 +112,23 @@ router.post("/get-bus-by-id", authMiddleware, async(req,res)=>{
     }
 })
 
+
+
+// Get all buses by bus number
+router.get('/api/buses/search',authMiddleware, async (req, res) => {
+    const busNumber = req.query.busNumber;
+    try {
+      // Your logic to find buses by bus number
+      const buses = await Bus.find({ busNumber: { $regex: busNumber, $options: 'i' } }); // Regex for search
+      res.json(buses);
+    } catch (err) {
+      console.error('Error fetching buses:', err);
+      res.status(500).json({ error: 'Error fetching buses' });
+    }
+  });
+
+
+
+
+
 module.exports=router;

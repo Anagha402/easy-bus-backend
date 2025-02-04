@@ -1,122 +1,222 @@
-const express = require('express');
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
-const Booking = require('../Models/bookingsModel'); // Replace with your Booking model
-const authMiddleware = require('../Middlewares/authMiddleware');
-const router = express.Router();
-const Bus = require('../Models/busModel');
+const router=require('express').Router()
+const User=require('../Models/usersModel')
+const bcrypt=require('bcryptjs')
+const jwt=require('jsonwebtoken')
+const authMiddleware = require('../Middlewares/authMiddleware')
+const nodemailer=require('nodemailer')
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID, // Add in .env file
-    key_secret: process.env.RAZORPAY_KEY_SECRET, // Add in .env file
+// Configure nodemailer
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,  
+        pass: process.env.EMAIL_PASS,  
+    },
 });
 
-// Route to create Razorpay order
-router.post('/create-order', authMiddleware, async (req, res) => {
-    let { amount, couponCode } = req.body; // Original amount in rupees
+// Generate OTP function
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Log the amount before any calculation
-    console.log("Original amount before discount:", amount);
-
-    // Calculate discount in the backend
-    if (couponCode === "DISCOUNT30" && amount > 3000) {
-        amount = amount * 0.7; // Apply 30% discount
-        console.log(`Discount applied: Final amount after discount: ₹${amount}`);
-    }
-
+router.post('/register', async (req, res) => {
     try {
-        // Log the amount being passed to Razorpay (in paise)
-        const amountInPaise = Math.round(amount * 100); // Convert to paise
-        console.log("Amount to Razorpay (in paise):", amountInPaise);
+        const { name, email, password } = req.body;
 
-        const options = {
-            amount: amountInPaise, // Convert to paise
-            currency: "INR",
-            receipt: `receipt_${Date.now()}`,
-        };
-
-        const order = await razorpay.orders.create(options);
-        console.log("Razorpay order created successfully:", order);
-        res.status(200).send({ success: true, order });
-    } catch (error) {
-        console.error("Error creating Razorpay order:", error);
-        res.status(500).send({ success: false, message: error.message });
-    }
-});
-
-// Route to verify Razorpay payment
-router.post('/verify-payment', authMiddleware, async (req, res) => {
-    const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        bus,
-        user,
-        seats,
-        amount, // Original amount in rupees
-        couponCode,
-    } = req.body;
-
-    console.log("Received data for payment verification:", {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        bus,
-        user,
-        seats,
-        amount,
-        couponCode,
-    });
-
-    let discountedAmount = amount; // Start with original amount
-
-    // Calculate discount in the backend
-    if (couponCode === "DISCOUNT30" && amount > 3000) {
-        discountedAmount = amount * 0.7; // Apply 30% discount
-        console.log(`Discount applied: Original: ₹${amount}, Discounted: ₹${discountedAmount}`);
-    }
-
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto
-        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-        .update(body.toString())
-        .digest("hex");
-
-    if (expectedSignature === razorpay_signature) {
-        try {
-            // Save booking to MongoDB
-            const newBooking = new Booking({
-                bus,
-                user,
-                seats,
-                totalAmount: discountedAmount, // Save discounted amount
-                transactionId: razorpay_payment_id,
-            });
-
-            await newBooking.save();
-            console.log("Booking saved successfully with discounted amount:", discountedAmount);
-
-            // Update the bus document
-            const busData = await Bus.findById(bus);
-            if (!busData) {
-                console.error("Bus not found!");
-                return res.status(404).send({ success: false, message: "Bus not found!" });
-            }
-
-            busData.seatsBooked = [...new Set([...busData.seatsBooked, ...seats])]; // Avoid duplicate seats
-            await busData.save();
-
-            console.log("Bus data updated successfully with booked seats:", seats);
-
-            res.status(200).send({ success: true, message: "Payment verified, booking confirmed!" });
-        } catch (error) {
-            console.error("Error saving booking or updating bus:", error.message);
-            res.status(500).send({ success: false, message: "Booking save failed!" });
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.send({ message: "User already exists", success: false });
         }
-    } else {
-        console.error("Invalid payment signature!");
-        res.status(400).send({ success: false, message: "Invalid payment signature!" });
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const otp = generateOTP();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins validity
+
+        const newUser = new User({ name, email, password: hashedPassword, otp, otpExpires });
+        await newUser.save();
+
+        // Send OTP via email
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: "Your OTP Code",
+            text: `Your OTP code is ${otp}. It is valid for 10 minutes.`,
+        });
+
+        return res.send({ message: "OTP sent. Please verify.", success: true });
+
+    } catch (error) {
+        return res.status(500).send({ message: error.message, success: false });
     }
 });
 
-module.exports = router;
+// Verify OTP
+router.post('/verify-otp', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user || user.otp !== otp || new Date() > user.otpExpires) {
+            return res.send({ message: "Invalid or expired OTP", success: false });
+        }
+
+        user.otp = null;  
+        user.otpExpires = null;  
+        await user.save();
+
+        return res.send({ message: "OTP verified successfully", success: true });
+
+    } catch (error) {
+        return res.status(500).send({ message: error.message, success: false });
+    }
+});
+
+//register new user
+// router.post('/register',async(req,res)=>{
+    
+    
+//     try{
+//         const existingUser= await User.findOne({email:req.body.email})
+//         if(existingUser){
+//            return res.send({
+//             message:"User already exist",
+//             success:false,
+//             data:null
+//       })
+
+//         }
+//         const hashedPassword=await bcrypt.hash(req.body.password,10);
+//         req.body.password=hashedPassword
+//         const newUser=new User(req.body)
+//         await newUser.save()
+
+//          res.send({
+//             message:"User created successfully",
+//             success:true,
+//             data:null
+//       })
+
+
+
+//     }catch(error){
+//         return res.send({
+//             message:error.message,
+//             success:false,
+//             data:null
+//       })
+
+//     }
+// })
+
+//login
+router.post('/login', async(req,res)=>{
+    try{
+        const userExists= await User.findOne({email:req.body.email})
+
+        if(!userExists){
+            return res.send({
+                message:"User does not exist",
+                success:false,
+                data:null
+            })
+        }
+        if(userExists.isBlocked){
+            res.send({
+                message:"Your account is blocked.Please contact the admin",
+                success:false,
+                data:null
+            })
+
+        }
+
+
+
+        const passwordMatch= await bcrypt.compare(req.body.password, userExists.password)
+
+        if(!passwordMatch){
+            return res.send({
+                message:"Incorrect Password",
+                success:false,
+                data:null
+            })
+        }
+        const token=jwt.sign({userId:userExists._id},process.env.jwt_secret,{expiresIn:"1d"})
+        res.send({
+            messsage:"User logged in successfully",
+            success:true,
+            data:token
+        })
+
+    }catch(error){
+        res.send({
+            messsage:error.message,
+            success:false,
+            data:null
+        })
+
+
+    }
+})
+
+//get-user-by-id
+router.post('/get-user-by-id', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.body.userId);
+        res.send({
+            message: "User fetched successfully",
+            success: true,
+            data: user
+        });
+    } catch (error) {
+        res.send({
+            message: error.message,
+            success: false,
+            data: null
+        });
+    }
+});
+
+//get-all-users
+router.post('/get-all-users', authMiddleware, async(req,res)=>{
+    try{
+        const users= await User.find({}).skip(1)
+        res.send({
+            message:"Users fetched successfully",
+            success:true,
+            data:users
+        })
+
+    }catch(error){
+        res.send({
+            message:error.message,
+            success:false,
+            data:null
+        })
+
+    }
+})
+
+
+
+
+
+//update-user
+router.post("/update-user-permissions", authMiddleware, async(req,res)=>{
+    try{
+        await User.findByIdAndUpdate(req.body._id, req.body)
+        res.send({
+            message:"User permissions updated successfully",
+            success:true,
+            data:null
+        })
+
+
+    }catch(error){
+        res.send({
+            message:error.message,
+            success:false,
+            data:null
+        })
+
+    }
+})
+
+module.exports=router
