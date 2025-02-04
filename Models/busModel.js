@@ -51,7 +51,9 @@ const busSchema= new mongoose.Schema({
     status:{
         type:String,
         default:"Yet to Start"
-    }
+    },
+    //routes
+    routes: { type: [String], default: [] },  // New field to store routes
 
 })
 
