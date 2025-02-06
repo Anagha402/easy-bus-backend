@@ -19,6 +19,7 @@
     "moment": "^2.30.1",
     "mongoose": "^8.9.3",
     "nodemailer": "^6.9.16",
-    "razorpay": "^2.9.5"
+    "razorpay": "^2.9.5",
+    "socket.io": "^4.8.1"
   }
 }

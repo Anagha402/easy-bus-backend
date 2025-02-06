@@ -54,6 +54,11 @@ const busSchema= new mongoose.Schema({
     },
     //routes
     routes: { type: [String], default: [] },  // New field to store routes
+  //FEMALE RESERVATION
+    femaleReservedSeats: {
+        type: Array,
+        default: []
+    }
 
 })
 
