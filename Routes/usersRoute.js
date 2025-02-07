@@ -19,36 +19,52 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 const otpStorage = new Map(); // Temporary storage for OTPs
 
-//  Register Route - Only Sends OTP
+// Function to validate password
+const validatePassword = (password) => {
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#]).{8,}$/.test(password);
+  };
+  
+
+// Register Route - Sends OTP
 router.post("/register", async (req, res) => {
     try {
-        const { name, email, password } = req.body;
-
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.send({ message: "User already exists", success: false });
-        }
-
-        const otp = generateOTP();
-        const otpExpires = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
-
-        // Store OTP and user details temporarily
-        otpStorage.set(email, { name, email, password, otp, otpExpires });
-
-        // Send OTP via email
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: "Your OTP Code",
-            text: `Your OTP code is ${otp}. It is valid for 10 minutes.`,
+      const { name, email, password } = req.body;
+      
+      console.log("Received registration data:", req.body); // Debugging line
+  
+      if (!validatePassword(password)) {
+        return res.send({
+          message: "Invalid password format.",
+          success: false
         });
-
-        return res.send({ message: "OTP sent. Please verify.", success: true });
-
+      }
+  
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.send({ message: "User already exists", success: false });
+      }
+  
+      const otp = generateOTP();
+      const otpExpires = Date.now() + 10 * 60 * 1000;
+      otpStorage.set(email, { name, email, password, otp, otpExpires });
+  
+      console.log("Generated OTP:", otp); // Debugging line
+  
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Your OTP Code",
+        text: `Your OTP code is ${otp}. It is valid for 10 minutes.`,
+      });
+  
+      return res.send({ message: "OTP sent. Please verify.", success: true });
+  
     } catch (error) {
-        return res.status(500).send({ message: error.message, success: false });
+      console.error("Error in register route:", error); // Debugging line
+      return res.status(500).send({ message: error.message, success: false });
     }
-});
+  });
+  
 
 //  Verify OTP - Saves User if OTP Matches
 router.post("/verify-otp", async (req, res) => {
