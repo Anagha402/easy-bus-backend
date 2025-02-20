@@ -118,7 +118,7 @@ router.post("/get-bus-by-id", authMiddleware, async(req,res)=>{
 router.get('/api/buses/search',authMiddleware, async (req, res) => {
     const busNumber = req.query.busNumber;
     try {
-      // Your logic to find buses by bus number
+      //  find buses by bus number
       const buses = await Bus.find({ busNumber: { $regex: busNumber, $options: 'i' } }); // Regex for search
       res.json(buses);
     } catch (err) {

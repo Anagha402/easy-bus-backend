@@ -76,73 +76,10 @@ router.post("/create-order", authMiddleware, async (req, res) => {
     }
 });
 
-// Route to verify Razorpay payment
-// router.post("/verify-payment", authMiddleware, async (req, res) => {
-//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bus, user, seats, amount, couponCode } = req.body;
-
-//     console.log("Received data for payment verification:", {
-//         razorpay_order_id,
-//         razorpay_payment_id,
-//         razorpay_signature,
-//         bus,
-//         user,
-//         seats,
-//         amount,
-//         couponCode,
-//     });
-
-//     let discountedAmount = amount;
-//     if (couponCode === "DISCOUNT30" && amount > 3000) {
-//         discountedAmount = amount * 0.7;
-//         console.log(`Discount applied: ₹${discountedAmount}`);
-//     }
-
-//     const body = razorpay_order_id + "|" + razorpay_payment_id;
-//     const expectedSignature = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET).update(body).digest("hex");
-
-//     if (expectedSignature === razorpay_signature) {
-//         try {
-//             const newBooking = new Booking({
-//                 bus,
-//                 user,
-//                 seats,
-//                 totalAmount: discountedAmount,
-//                 transactionId: razorpay_payment_id,
-//             });
-
-//             await newBooking.save();
-//             console.log("Booking saved successfully.");
-
-//             const busData = await Bus.findById(bus);
-//             if (!busData) {
-//                 return res.status(404).send({ success: false, message: "Bus not found!" });
-//             }
-
-//             busData.seatsBooked = [...new Set([...busData.seatsBooked, ...seats])];
-//             await busData.save();
-
-//             console.log("Bus data updated successfully.");
-
-//             // Fetch user email
-//             const userDetails = await User.findById(user);
-//             if (!userDetails) {
-//                 return res.status(404).send({ success: false, message: "User not found!" });
-//             }
-
-//             await sendTicketEmail(userDetails.email, busData, seats, discountedAmount);
-
-//             res.status(200).send({ success: true, message: "Payment verified, booking confirmed, and email sent!" });
-//         } catch (error) {
-//             console.error("Error processing booking:", error.message);
-//             res.status(500).send({ success: false, message: "Booking failed!" });
-//         }
-//     } else {
-//         res.status(400).send({ success: false, message: "Invalid payment signature!" });
-//     }
-// });
 
 
-// Updated route for payment verification to handle passenger details
+
+//  Route for payment verification to handle passenger details
 router.post("/verify-payment", authMiddleware, async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bus, user, seats, amount, couponCode, passengerDetails } = req.body;
 

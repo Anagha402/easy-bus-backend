@@ -28,11 +28,7 @@ app.use('/api/admin', adminRoute);
 
 
 
-app.post("/api/test-post", (req, res) => {
-    console.log("POST request received at /test-post");
-    console.log("Request body:", req.body);
-    res.status(200).send("Test POST route is working");
-});
+
 
 app.listen(port,()=>{
     console.log(`Nodejs server listening on port ${port} `);

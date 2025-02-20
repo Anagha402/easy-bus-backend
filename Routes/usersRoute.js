@@ -30,7 +30,7 @@ router.post("/register", async (req, res) => {
     try {
       const { name, email, password } = req.body;
       
-      console.log("Received registration data:", req.body); // Debugging line
+      //console.log("Received registration data:", req.body); 
   
       if (!validatePassword(password)) {
         return res.send({
@@ -48,7 +48,7 @@ router.post("/register", async (req, res) => {
       const otpExpires = Date.now() + 10 * 60 * 1000;
       otpStorage.set(email, { name, email, password, otp, otpExpires });
   
-      console.log("Generated OTP:", otp); // Debugging line
+      //console.log("Generated OTP:", otp);
   
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
@@ -60,7 +60,7 @@ router.post("/register", async (req, res) => {
       return res.send({ message: "OTP sent. Please verify.", success: true });
   
     } catch (error) {
-      console.error("Error in register route:", error); // Debugging line
+      //console.error("Error in register route:", error); 
       return res.status(500).send({ message: error.message, success: false });
     }
   });
@@ -106,42 +106,14 @@ router.post("/verify-otp", async (req, res) => {
 
 
 
-//register new user
-// router.post('/register',async(req,res)=>{
-    
-    
-//     try{
-//         const existingUser= await User.findOne({email:req.body.email})
-//         if(existingUser){
-//            return res.send({
-//             message:"User already exist",
-//             success:false,
-//             data:null
-//       })
-
-//         }
-//         const hashedPassword=await bcrypt.hash(req.body.password,10);
-//         req.body.password=hashedPassword
-//         const newUser=new User(req.body)
-//         await newUser.save()
-
-//          res.send({
-//             message:"User created successfully",
-//             success:true,
-//             data:null
-//       })
 
 
 
-//     }catch(error){
-//         return res.send({
-//             message:error.message,
-//             success:false,
-//             data:null
-//       })
 
-//     }
-// })
+
+
+
+
 
 //login
 router.post('/login', async(req,res)=>{
